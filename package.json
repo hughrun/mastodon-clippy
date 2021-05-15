@@ -1,0 +1,16 @@
+{
+  "name": "mastodon-clippy",
+  "version": "1.0.0",
+  "description": "Mastodon clippy bot",
+  "repository": "https://github.com/hughrun/mastodon-clippy.git",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Hugh Rundle <hugh@hughrundle.net> (https://www.hughrundle.net)",
+  "license": "AGPL-3.0-or-later",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "ws": "^7.4.5"
+  }
+}

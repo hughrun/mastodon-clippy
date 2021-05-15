@@ -1,0 +1,15 @@
+[Service]
+Type=simple
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=15
+TimeoutSec=15
+KillMode=process
+User=clippy
+WorkingDirectory=/home/clippy/mastodon-clippy
+Environment="CLIPPY_TOPIC=auspol"
+Environment="CLIPPY_ACCESS_TOKEN=your-token-here"
+Environment="CLIPPY_DOMAIN=example.com"
+Environment="CLIPPY_USER=auspol_clippy"
+[Install]
+WantedBy=multi-user.target
