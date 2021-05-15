@@ -18,7 +18,7 @@ See an example in action at [auspol_clippy](https://ausglam.space/@auspol_clippy
 
 Some settings for your bot account will be automatically set/overridden whenever the bot starts. These are:
 
-```json
+```js
 locked: false,
 bot: true,
 discoverable: true,
