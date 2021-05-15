@@ -39,6 +39,8 @@ It does not appear to be possible to use the API to set accounts to hide their s
 
 You can use the example systemd file at `mastodon-clippy.service.example` tweaked to suit your setup. This will keep the bot running and set your environment variables as above.
 
+Then run `npm install .` to install npm modules `axios` and `ws`.
+
 # running
 
 Start the bot with the traditional `node index.js`.
