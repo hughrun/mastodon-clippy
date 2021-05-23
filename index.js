@@ -2,7 +2,7 @@
 
   Clippy bot for mastodon.
 
-  (c) Hugh Rundle, licensed AGPL 3.0+
+  (c) Hugh Rundle, licensed AGPL 3.0 or later
   Contact @hugh@ausglam.space
 
   NOTE: Since requesting users must be followed by the bot, they will "out" themselves by using it.
@@ -11,7 +11,7 @@
 
 // require modules
 const axios = require('axios')
-const crypto = require('crypto') // built in node module requires v12.19 or higher
+const crypto = require('crypto') // built-in node module requires v12.19 or higher
 const WebSocket = require('ws')
 
 // clippy settings
@@ -143,7 +143,7 @@ ws.on('message', msg => {
       if ( data.content.includes(topic) ) {
         sendResponse(rip, user)
       }
-      else if (data.spoiler_text == topic) {
+      else if (data.spoiler_text.includes(topic)) {
           sendResponse(rip, user)
       } 
       else if (data.tags.includes(topic)) {

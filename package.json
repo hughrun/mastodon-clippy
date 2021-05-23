@@ -1,6 +1,6 @@
 {
   "name": "mastodon-clippy",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Mastodon clippy bot",
   "repository": "https://github.com/hughrun/mastodon-clippy.git",
   "main": "index.js",
