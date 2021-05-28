@@ -17,7 +17,7 @@ const WebSocket = require('ws')
 // clippy settings
 
 const access_token = process.env.CLIPPY_ACCESS_TOKEN
-const topic = process.env.CLIPPY_TOPIC
+const topic = process.env.CLIPPY_TOPIC.toLowerCase()
 const clippy = process.env.CLIPPY_USER
 const domain = process.env.CLIPPY_DOMAIN
 
@@ -43,9 +43,10 @@ function initiateSettings() {
     })
 }
 
+// return random suggestion string
 function suggestion() {
 
-  const n = crypto.randomInt(4)
+  const n = crypto.randomInt(6)
 
     switch(n) {
       case 0:
@@ -56,6 +57,10 @@ function suggestion() {
         return 'Can I help you take a walk outside?';
       case 3:
         return 'You may like to reconsider your life choices.';
+      case 4:
+        return 'Why not try looking at #CatsOfInstagram instead?';
+      case 5:
+        return `You're better than this, come on.`;
     }
 }
 
@@ -64,6 +69,7 @@ function sendResponse(rip, user) {
 
   let payload = {
     'status' : `@${user} It looks like you're posting about '${topic}'. ${suggestion()}`,
+    'spoiler_text' : topic,
     'in_reply_to_id' : rip,
   }
 
@@ -74,6 +80,7 @@ function sendResponse(rip, user) {
 
 }
 
+// follow users who subscribe
 function followAction(id, action) {
 
   let url = `https://${domain}/api/v1/accounts/${id}/${action}`
@@ -88,6 +95,13 @@ function followAction(id, action) {
     console.error(err.message)
   })
 
+}
+
+function filterMentions(text, mentions) {
+  // filter toot text to remove mentions before checking for the trigger word
+  // this means if your trigger word is in a user name, you don't get a tsunami of clippy advice
+  let rawArray = text.replace(/(<([^>]+)>)/gi, "").split(' ')
+  return rawArray.map( stub => mentions.some( name => `@${name}` === stub) ? "" : stub).toString()
 }
 
 // ***********************
@@ -136,17 +150,20 @@ ws.on('message', msg => {
   // updates (posts)
   if (packet.event == 'update') {
     let rip = data.id
-    let user = data.account.username
-
-    // exclude own toots to avoid an infinite loop
-    if (data.account.username !== clippy) {
-      if ( data.content.includes(topic) ) {
+    let user = data.account.acct
+    // get just the account names (@name@domain.tld)
+    let mentions = data.mentions.map( mention => mention.acct)
+    // exclude own toots and @mentions to avoid an infinite loops
+    if (data.account.username !== clippy && !mentions.includes(clippy)) {
+      // get rid of mentions in case topic is within a username
+      let text = filterMentions(data.content, mentions)
+      if ( text.toLowerCase().includes(topic) ) {
         sendResponse(rip, user)
       }
-      else if (data.spoiler_text.includes(topic)) {
+      else if (data.spoiler_text.toLowerCase().includes(topic)) {
           sendResponse(rip, user)
       } 
-      else if (data.tags.includes(topic)) {
+      else if (data.tags.map(tag => tag.name.toLowerCase()).includes(topic)) {
         sendResponse(rip, user)
       }
     }
