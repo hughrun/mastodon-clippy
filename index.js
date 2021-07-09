@@ -26,8 +26,14 @@ const headers = {
   'Authorization' : `Bearer ${access_token}`
 }
 
+function resetConnection(socket) {
+  terminate(socket)
+  console.log(`waiting after error`)
+  setTimeout( function() { listen() }, 5000)
+}
+
 // set up bot account with correct settings
-function initiateSettings() {
+function initiateSettings(socket) {
 
     let account = {
       locked: false,
@@ -40,37 +46,42 @@ function initiateSettings() {
     return axios.patch(`https://${domain}/api/v1/accounts/update_credentials`, account, { headers: headers })
     .catch( err => {
       console.error('ERROR applying bot user settings: ', err.message)
+      terminate(socket)
     })
 }
 
 // return random suggestion string
-function suggestion() {
+function suggestion(username) {
 
-  const n = crypto.randomInt(6)
+  const n = crypto.randomInt(8)
 
     switch(n) {
       case 0:
         return 'How about logging off instead?';
       case 1:
-        return 'Would you like to delete your toot?';
+        return `Would you like to delete your toot, ${username}?`;
       case 2:
         return 'Can I help you take a walk outside?';
       case 3:
         return 'You may like to reconsider your life choices.';
       case 4:
-        return 'Why not try looking at #CatsOfInstagram instead?';
+        return 'Why not try looking at #CatsOfMastodon instead?';
       case 5:
-        return `You're better than this, come on.`;
+        return `Come on ${username}, we've talked about this.`;
+      case 6:
+        return `You should go look at some trees. Trees are calming`;
+      case 7:
+        return `I'm not angry. I'm just very disappointed.`;
     }
 }
 
 // send a message when someone toots about the topic
-function sendResponse(rip, user) {
+function sendResponse(rid, user, username) {
 
   let payload = {
-    'status' : `@${user} It looks like you're posting about '${topic}'. ${suggestion()}`,
+    'status' : `@${user} It looks like you're posting about '${topic}'. ${suggestion(username)}`,
     'spoiler_text' : topic,
-    'in_reply_to_id' : rip,
+    'in_reply_to_id' : rid,
   }
 
   axios.post(`https://${domain}/api/v1/statuses`, payload, { headers: headers })
@@ -108,66 +119,80 @@ function filterMentions(text, mentions) {
 //  STREAMING USER TIMELINE
 //  This is where the action is!
 // ***********************
-const ws = new WebSocket(`wss://${domain}/api/v1/streaming?access_token=${access_token}&stream=user`)
 
-// make sure bot is set up correctly each time it starts
-initiateSettings() 
+function terminate(socket) {
+  console.error(`Terminating connection...`)
+  socket.terminate()
+  console.log(`Terminated`)
+}
 
-// errors
-ws.on('error', err => {
-  console.error(`WebSocket error: ${err.message}`)
-})
+function listen() {
 
-// check updates and notifications in the stream
-ws.on('message', msg => {
-  let packet = JSON.parse(msg)
-  let data = JSON.parse(packet.payload)
+  console.log(`Listening...`)
+  const ws = new WebSocket(`wss://${domain}/api/v1/streaming?access_token=${access_token}&stream=user`)
 
-  // notifications
-  if (packet.event == 'notification') {
-
-    // always follow back
-    if (data.type == 'follow') {
-      followAction(data.account.id, 'follow')
-    }
-
-    if (data.type == 'mention') {
-
-      let post = data.status.content
-
-      // check start requests
-      if (post.match(/\bSTART\b/)) {
+  // make sure bot is set up correctly each time it starts
+  initiateSettings(ws)
+  
+  // errors
+  ws.on('error', err => {
+    console.error(`WebSocket error: ${err.message}`)
+    resetConnection(ws)
+  })
+  
+  // check updates and notifications in the stream
+  ws.on('message', msg => {
+    let packet = JSON.parse(msg)
+    let data = JSON.parse(packet.payload)
+  
+    // notifications
+    if (packet.event == 'notification') {
+  
+      // always follow back
+      if (data.type == 'follow') {
         followAction(data.account.id, 'follow')
       }
-
-      // check stop requests
-      if (post.match(/\STOP\b/)) {
-        followAction(data.account.id, 'unfollow')
+  
+      if (data.type == 'mention') {
+  
+        let post = data.status.content
+  
+        // check start requests
+        if (post.match(/\bSTART\b/)) {
+          followAction(data.account.id, 'follow')
+        }
+  
+        // check stop requests
+        if (post.match(/\STOP\b/)) {
+          followAction(data.account.id, 'unfollow')
+        }
       }
     }
-  }
-
-  // updates (posts)
-  if (packet.event == 'update') {
-    let rip = data.id
-    let user = data.account.acct
-    // get just the account names (@name@domain.tld)
-    let mentions = data.mentions.map( mention => mention.acct)
-    // exclude own toots and @mentions to avoid an infinite loops
-    if (data.account.username !== clippy && !mentions.includes(clippy)) {
-      // get rid of mentions in case topic is within a username
-      let text = filterMentions(data.content, mentions)
-      if ( text.toLowerCase().includes(topic) ) {
-        sendResponse(rip, user)
-      }
-      else if (data.spoiler_text.toLowerCase().includes(topic)) {
-          sendResponse(rip, user)
-      } 
-      else if (data.tags.map(tag => tag.name.toLowerCase()).includes(topic)) {
-        sendResponse(rip, user)
+  
+    // updates (posts)
+    if (packet.event == 'update') {
+      let rid = data.id
+      let user = data.account.acct
+      let username = data.account.username
+      // get just the account names (@name@domain.tld)
+      let mentions = data.mentions.map( mention => mention.acct)
+      // exclude own toots and @mentions to avoid an infinite loops
+      if (username !== clippy && !mentions.includes(clippy)) {
+        // get rid of mentions in case topic is within a username
+        let text = filterMentions(data.content, mentions)
+        if ( text.toLowerCase().includes(topic) ) {
+          sendResponse(rid, user, username)
+        }
+        else if (data.spoiler_text.toLowerCase().includes(topic)) {
+            sendResponse(rid, user, username)
+        } 
+        else if (data.tags.map(tag => tag.name.toLowerCase()).includes(topic)) {
+          sendResponse(rid, user, username)
+        }
       }
     }
-  }
-})
+  })
+}
 
-
+// let's go
+listen()
