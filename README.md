@@ -1,1 +1,1 @@
-This has now moved to https://git.hugh.run/hugh/mastodon-clippy
+Nag yourself when you post toots that make you feel bad.
