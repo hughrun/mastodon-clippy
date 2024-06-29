@@ -11,6 +11,6 @@
   "license": "AGPL-3.0-or-later",
   "dependencies": {
     "axios": "^0.21.2",
-    "ws": "^7.5.2"
+    "ws": "^7.5.10"
   }
 }
